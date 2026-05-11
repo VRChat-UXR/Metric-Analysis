@@ -1,4 +1,3 @@
-# %% [markdown]
 # Cross-wave descriptive comparison
 # Discovers all UXR_Survey_Results_YYYY-MM.xlsx files, computes per-wave
 # T2B/B2B per item and the Enforcement Balance distribution, then produces:
@@ -13,7 +12,7 @@
 # Single-wave behavior: writes the per-wave snapshot tables and exits before
 # producing comparison charts (logs that ≥2 waves are required).
 
-# %% Imports
+# Imports
 import re
 from pathlib import Path
 
@@ -37,7 +36,7 @@ print(f"Waves discovered: {waves}")
 if not waves:
     raise SystemExit("No UXR_Survey_Results_*.xlsx files found.")
 
-# %% Item map (kept in sync with per-wave scripts)
+# Item map (kept in sync with per-wave scripts)
 ITEMS = {
     14: "Ease of Use", 15: "Discovery", 16: "Emotional Experience",
     17: "Personalization", 18: "Social Connection", 19: "Visual Experience",
@@ -87,7 +86,7 @@ def per_wave_metrics(wave):
     return pd.DataFrame(rows), ef_row
 
 
-# %% Aggregate across waves
+# Aggregate across waves
 all_rows, ef_rows = [], []
 for w in waves:
     items_df, ef_row = per_wave_metrics(w)
@@ -107,7 +106,7 @@ if len(waves) < 2:
     print("When the next wave's xlsx is added to the project root, re-run this script.")
     raise SystemExit(0)
 
-# %% Wave-over-wave deltas + significance (two-proportion z-test on T2B)
+# Wave-over-wave deltas + significance (two-proportion z-test on T2B)
 def two_prop_z(p1, n1, p2, n2):
     """Two-proportion z-test on T2B counts. Returns (z, p_value)."""
     if n1 == 0 or n2 == 0:
@@ -142,7 +141,7 @@ deltas_df.to_csv(OUT / "t2b_deltas.csv", index=False)
 print("\nWave-over-wave T2B deltas with significance test:")
 print(deltas_df)
 
-# %% Trend chart: T2B per item across waves (multipanel)
+# Trend chart: T2B per item across waves (multipanel)
 n_items = len(ITEM_ORDER)
 ncols = 3
 nrows = int(np.ceil(n_items / ncols))
@@ -167,7 +166,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "t2b_trend_per_item.png", dpi=120)
 plt.close(fig)
 
-# %% Slope chart (2-wave) / line chart (3+ waves)
+# Slope chart (2-wave) / line chart (3+ waves)
 fig, ax = plt.subplots(figsize=(8, 6))
 for item in ITEM_ORDER:
     sub = trend[trend["item"] == item].sort_values("wave")
@@ -182,7 +181,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "t2b_slope_chart.png", dpi=120)
 plt.close(fig)
 
-# %% Latest-wave change magnitude (sorted bar)
+# Latest-wave change magnitude (sorted bar)
 latest_delta = deltas_df[deltas_df["to_wave"] == waves[-1]].copy()
 latest_delta = latest_delta.sort_values("delta_pp")
 fig, ax = plt.subplots(figsize=(9, 5))
@@ -204,7 +203,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "t2b_change_magnitude.png", dpi=120)
 plt.close(fig)
 
-# %% Enforcement Direction trend
+# Enforcement Direction trend
 fig, ax = plt.subplots(figsize=(8, 4.5))
 ax.plot(ef_trend["wave"], ef_trend["want_more"], "o-",
         color="#08306b", label="Want MORE enforcement", linewidth=2)
@@ -225,7 +224,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "enforcement_direction_trend.png", dpi=120)
 plt.close(fig)
 
-# %% Print summary
+# Print summary
 print("\n" + "=" * 60)
 print("Files written")
 print("=" * 60)

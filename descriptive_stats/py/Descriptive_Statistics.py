@@ -1,9 +1,8 @@
-# %% [markdown]
 # Descriptive Statistics & Percentage Breakdowns
 # Per-item distributions, segment crosstabs, and Likert-friendly visualizations.
 # Companion to Analysis_Exploration.py. See README.md for methodology overview.
 
-# %% Imports & wave selection
+# Imports & wave selection
 import argparse
 import re
 from pathlib import Path
@@ -46,7 +45,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 CHARTS.mkdir(parents=True, exist_ok=True)
 print(f"Wave: {WAVE}\nData: {DATA}\nOut:  {OUT}\n")
 
-# %% Load & align scales
+# Load & align scales
 df = pd.read_excel(DATA).iloc[1:].reset_index(drop=True)  # drop SurveyMonkey header row
 N = len(df)
 print(f"N = {N}")
@@ -90,7 +89,7 @@ ENFORCEMENT_LABELS = [
 # Standard 5-point favorability labels for the 9 monotonic items
 FAVORABILITY_LABELS = ["Most negative", "Negative", "Neutral", "Positive", "Most positive"]
 
-# %% Build a tidy distribution table — % per response option, by item
+# Build a tidy distribution table — % per response option, by item
 
 def build_distribution(col_idx, label):
     """Return a dict: item, n, %distribution by favorability bucket, T2B, B2B, mean."""
@@ -128,7 +127,7 @@ print("\nPer-item percentage distribution (favorability axis):")
 print(dist_df.to_string(index=False))
 dist_df.to_csv(OUT / "descriptives_distribution.csv", index=False)
 
-# %% Enforcement Balance — Goldilocks, separate handling
+# Enforcement Balance — Goldilocks, separate handling
 ef = df.iloc[:, 23].dropna()
 ef_counts = ef.value_counts().reindex(ENFORCEMENT_ORDER).fillna(0).astype(int)
 ef_pct = (ef_counts / ef_counts.sum() * 100).round(1)
@@ -150,7 +149,7 @@ print("\nEnforcement Balance distribution:")
 print(ef_table.to_string(index=False))
 ef_table.to_csv(OUT / "descriptives_enforcement.csv", index=False)
 
-# %% Segmentation question distributions
+# Segmentation question distributions
 usage_dist = df.iloc[:, USAGE_COL].value_counts(normalize=True).mul(100).round(1)
 vrcplus_dist = df.iloc[:, VRCPLUS_COL].value_counts(normalize=True).mul(100).round(1)
 print("\nUsage Frequency distribution (%):")
@@ -161,7 +160,7 @@ print(vrcplus_dist.to_string())
 usage_dist.to_csv(OUT / "descriptives_usage.csv", header=["%"])
 vrcplus_dist.to_csv(OUT / "descriptives_vrcplus.csv", header=["%"])
 
-# %% T2B / B2B leaderboard chart — what's working, what's not
+# T2B / B2B leaderboard chart — what's working, what's not
 plot_df = dist_df.sort_values("T2B_pct", ascending=True).reset_index(drop=True)
 fig, ax = plt.subplots(figsize=(9, 5))
 y = np.arange(len(plot_df))
@@ -180,7 +179,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "descr_t2b_b2b_leaderboard.png", dpi=120)
 plt.close(fig)
 
-# %% Diverging stacked bar chart — standard Likert visualization
+# Diverging stacked bar chart — standard Likert visualization
 # Each item shows full distribution with neutral centered at 0
 fig, ax = plt.subplots(figsize=(11, 5))
 items_order = dist_df.sort_values("T2B_pct", ascending=True)["item"].tolist()
@@ -212,7 +211,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "descr_diverging_stacked.png", dpi=120)
 plt.close(fig)
 
-# %% Enforcement Balance — directional bar chart
+# Enforcement Balance — directional bar chart
 fig, ax = plt.subplots(figsize=(8, 4))
 colors = ["#67000d", "#d62728", "#1a7a1a", "#5a8fce", "#1f4ea1"]
 ax.bar(ENFORCEMENT_LABELS, ef_pct.values, color=colors)
@@ -229,7 +228,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "descr_enforcement_balance.png", dpi=120)
 plt.close(fig)
 
-# %% T2B by segment — Usage Frequency
+# T2B by segment — Usage Frequency
 USAGE_BINS = {
     "Every day": "High", "A few times a week": "High",
     "Once a week": "Medium", "A few times a month": "Medium",
@@ -267,7 +266,7 @@ print("\nT2B % by VRC+:")
 print(vrcplus_pivot)
 vrcplus_pivot.to_csv(OUT / "descriptives_t2b_by_vrcplus.csv")
 
-# %% Segment heatmap (T2B by item × segment)
+# Segment heatmap (T2B by item × segment)
 seg_combined = pd.concat([
     usage_pivot.add_prefix("Usage: "),
     vrcplus_pivot.rename(columns=lambda c: "VRC+: " + ("Yes" if "Yes" in c else "No")),
@@ -283,11 +282,10 @@ fig.tight_layout()
 fig.savefig(CHARTS / "descr_segment_heatmap.png", dpi=120)
 plt.close(fig)
 
-# %% [markdown]
 # T2B by Tenure (months since activation)
 # Tenure source: Custom Data 2 (col 9), numeric months 0–97. Buckets per spec.
 
-# %% Bucket tenure and compute T2B per item
+# Bucket tenure and compute T2B per item
 TENURE_COL = 9  # Custom Data 2 — months since activation
 TENURE_BUCKETS = ["0", "1-3", "4-12", "13-24", "25+"]
 
@@ -314,7 +312,7 @@ print("\nT2B % by Tenure Bucket:")
 print(tenure_pivot)
 tenure_pivot.to_csv(OUT / "descriptives_t2b_by_tenure.csv")
 
-# %% Tenure heatmap — same style as the existing segment heatmap
+# Tenure heatmap — same style as the existing segment heatmap
 col_labels_with_n = [f"{b}\n(n={tenure_n[b]})" for b in TENURE_BUCKETS]
 fig, ax = plt.subplots(figsize=(7.5, 5.5))
 sns.heatmap(tenure_pivot, annot=True, fmt=".0f", cmap="RdYlGn",
@@ -328,11 +326,10 @@ fig.tight_layout()
 fig.savefig(CHARTS / "descr_t2b_by_tenure.png", dpi=120)
 plt.close(fig)
 
-# %% [markdown]
 # Enforcement Balance × Usage — focused segmentation analysis
 # Goal: surface whether the Goldilocks distribution shifts with engagement.
 
-# %% Enforcement Balance by Usage — granular table (all 8 usage levels)
+# Enforcement Balance by Usage — granular table (all 8 usage levels)
 USAGE_ORDER_FULL = [
     "Every day", "A few times a week", "Once a week",
     "A few times a month", "Once a month", "Less than once a month",
@@ -355,7 +352,7 @@ print("\nEnforcement Balance by Usage Frequency (granular):")
 print(ef_by_usage_full)
 ef_by_usage_full.to_csv(OUT / "descriptives_enforcement_by_usage_full.csv")
 
-# %% Chi-square test of independence
+# Chi-square test of independence
 from scipy.stats import chi2_contingency
 contingency = pd.crosstab(df["Usage Bin"], df.iloc[:, 23])[ENFORCEMENT_ORDER]
 chi2, p_val, dof, expected = chi2_contingency(contingency)
@@ -365,7 +362,7 @@ n_total = contingency.values.sum()
 cramer_v = float(np.sqrt(chi2 / (n_total * (min(contingency.shape) - 1))))
 print(f"  Cramér's V (effect size) = {cramer_v:.3f}")
 
-# %% Diverging stacked bar chart — Enforcement Balance by Usage Bin
+# Diverging stacked bar chart — Enforcement Balance by Usage Bin
 USAGE_BIN_ORDER = ["Low", "Medium", "High"]  # bottom to top in chart
 ef_by_bin = pd.crosstab(df["Usage Bin"], df.iloc[:, 23], normalize="index")
 ef_by_bin = (ef_by_bin[ENFORCEMENT_ORDER] * 100).reindex(USAGE_BIN_ORDER)
@@ -416,7 +413,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "descr_enforcement_by_usage_diverging.png", dpi=120)
 plt.close(fig)
 
-# %% Net "want more - want less" by full usage frequency (the gradient view)
+# Net "want more - want less" by full usage frequency (the gradient view)
 ef_focus = ef_by_usage_full[ef_by_usage_full["n"] >= 30].copy()
 fig, ax = plt.subplots(figsize=(9, 4.5))
 xs = np.arange(len(ef_focus))
@@ -445,7 +442,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "descr_enforcement_direction_by_usage.png", dpi=120)
 plt.close(fig)
 
-# %% Print summary
+# Print summary
 print("\n" + "=" * 60)
 print("Files written")
 print("=" * 60)

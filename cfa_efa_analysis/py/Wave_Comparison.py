@@ -1,4 +1,3 @@
-# %% [markdown]
 # Cross-wave multivariate comparison
 # Reads each wave's `results.json` (produced by Analysis_Exploration.py) and tracks:
 #   - CFA fit indices (RMSEA, CFI, SRMR, χ²) over time
@@ -20,7 +19,7 @@
 # Run prerequisite: each wave's Analysis_Exploration.py must have been run
 # already (so results.json exists in cfa_efa_analysis/csv/<wave>/).
 
-# %% Imports
+# Imports
 import json
 import re
 from pathlib import Path
@@ -40,7 +39,7 @@ CHARTS.mkdir(parents=True, exist_ok=True)
 
 WAVE_RE = re.compile(r"^\d{4}-\d{2}$")
 
-# %% Discover waves with results.json
+# Discover waves with results.json
 waves = []
 for sub in sorted(CSV_DIR.iterdir()):
     if sub.is_dir() and WAVE_RE.match(sub.name) and (sub / "results.json").exists():
@@ -52,7 +51,7 @@ if not waves:
         "Run Analysis_Exploration.py for each wave first."
     )
 
-# %% Extract per-wave metrics
+# Extract per-wave metrics
 ITEMS_ORDER = [
     "Ease of Use", "Discovery", "Emotional Experience", "Personalization",
     "Social Connection", "Visual Experience", "Experience Value",
@@ -135,7 +134,7 @@ if len(waves) < 2:
           "Re-run after the next wave's Analysis_Exploration.py finishes.")
     raise SystemExit(0)
 
-# %% Fit indices trend
+# Fit indices trend
 fig, axes = plt.subplots(1, 3, figsize=(13, 4), sharex=True)
 THRESHOLDS = {"RMSEA": (0.08, "lower is better"),
               "CFI": (0.90, "higher is better"),
@@ -155,7 +154,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "fit_indices_trend.png", dpi=120)
 plt.close(fig)
 
-# %% Cronbach's α trend (Experience block)
+# Cronbach's α trend (Experience block)
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.plot(alpha_df["wave"], alpha_df["experience_alpha"], "o-", color="#2ca02c", linewidth=2)
 ax.fill_between(alpha_df["wave"], alpha_df["ci_low"], alpha_df["ci_high"],
@@ -173,7 +172,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "alpha_trend.png", dpi=120)
 plt.close(fig)
 
-# %% Cluster proportions over time (stacked area)
+# Cluster proportions over time (stacked area)
 pivot = cluster_df.pivot(index="wave", columns="cluster_label", values="pct")
 pivot = pivot.reindex(columns=[c for c in CLUSTER_LABELS if c in pivot.columns])
 fig, ax = plt.subplots(figsize=(8, 4.5))
@@ -195,7 +194,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "cluster_proportions_trend.png", dpi=120)
 plt.close(fig)
 
-# %% Cluster profile drift — overlay each cluster's shape per wave
+# Cluster profile drift — overlay each cluster's shape per wave
 fig, axes = plt.subplots(1, len([c for c in CLUSTER_LABELS if c in pivot.columns]),
                           figsize=(14, 4), sharey=True)
 if not isinstance(axes, np.ndarray):
@@ -217,7 +216,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "cluster_profile_drift.png", dpi=120)
 plt.close(fig)
 
-# %% Summary
+# Summary
 print("\n" + "=" * 60)
 print("Files written")
 print("=" * 60)

@@ -1,9 +1,8 @@
-# %% [markdown]
 # Monthly Metrics Survey — per-wave multivariate analysis
 # Three pillars (Experience, CPV, Trust & Safety) over 10 Likert-scale items.
 # See README.md for a methodology overview.
 
-# %% Imports & config
+# Imports & config
 import json
 import warnings
 from pathlib import Path
@@ -76,7 +75,7 @@ CHARTS.mkdir(parents=True, exist_ok=True)
 print(f"Wave: {WAVE}\nData: {DATA}\nOut:  {OUT}\n")
 RESULTS = {}  # collects outputs to dump as JSON for the report writers
 
-# %% Load data
+# Load data
 df_raw = pd.read_excel(DATA)
 print(f"Raw shape: {df_raw.shape}")
 
@@ -107,7 +106,7 @@ PILLAR_OF = {
     23: "Trust & Safety",
 }
 
-# %% Encode Likert + Goldilocks items
+# Encode Likert + Goldilocks items
 LIKERT_MAP = {
     "Strongly disagree": 1, "Disagree": 2, "Neither agree nor disagree": 3,
     "Agree": 4, "Strongly agree": 5,
@@ -144,7 +143,7 @@ data["VRC+"] = df_raw.iloc[:, 25]
 data = data.dropna(subset=list(ITEM_LABELS.values())).reset_index(drop=True)
 print(f"After dropping header / NA: {data.shape}")
 
-# %% Data quality checks
+# Data quality checks
 print("\nMissing per item:")
 print(data[list(ITEM_LABELS.values())].isna().sum())
 print("\nValue ranges per item:")
@@ -164,7 +163,7 @@ print("VRC+ counts:", data["VRC+"].value_counts().to_dict())
 ITEMS = list(ITEM_LABELS.values())  # 10 items in canonical order
 X = data[ITEMS].astype(float)
 
-# %% Brief sanity descriptives (not the headline — Liz already has these)
+# Brief sanity descriptives (not the headline — Liz already has these)
 desc = X.agg(["mean", "median", "std"]).T.round(2)
 desc["T2B_pct"] = ((X >= 4).mean() * 100).round(1)
 desc["B2B_pct"] = ((X <= 2).mean() * 100).round(1)
@@ -173,12 +172,11 @@ print(desc)
 desc.to_csv(OUT / "item_descriptives.csv")
 RESULTS["descriptives"] = desc.reset_index().rename(columns={"index": "item"}).to_dict(orient="records")
 
-# %% [markdown]
 # Section 7 — Exploratory Factor Analysis
 # Goal: see whether the proposed 3-pillar (or 9-sub-category) structure
 # is empirically supported by the response patterns.
 
-# %% EFA — KMO, Bartlett, parallel analysis, extraction
+# EFA — KMO, Bartlett, parallel analysis, extraction
 print("\n" + "=" * 60)
 print("EFA")
 print("=" * 60)
@@ -250,11 +248,10 @@ fig.tight_layout()
 fig.savefig(CHARTS / "efa_loadings_heatmap.png", dpi=120)
 plt.close(fig)
 
-# %% [markdown]
 # Section 8 — Confirmatory Factor Analysis on the 3-pillar model
 # Specify Experience (6 items), CPV (2), T&S (2 — Participation Safety + folded Enforcement).
 
-# %% CFA — 3-pillar model
+# CFA — 3-pillar model
 print("\n" + "=" * 60)
 print("CFA — 3-pillar model")
 print("=" * 60)
@@ -328,10 +325,9 @@ verdict = cfa_verdict(fit_clean)
 print(f"\nVerdict: {verdict}")
 RESULTS["cfa_verdict"] = verdict
 
-# %% [markdown]
 # Section 10 — K-means clustering (user personas)
 
-# %% K-means — k selection
+# K-means — k selection
 print("\n" + "=" * 60)
 print("K-means clustering")
 print("=" * 60)
@@ -372,7 +368,7 @@ RESULTS["kmeans_chosen_k"] = int(best_k)
 km_final = KMeans(n_clusters=best_k, n_init=50, random_state=42)
 data["Cluster"] = km_final.fit_predict(X_std)
 
-# %% Cluster profiles
+# Cluster profiles
 profile = data.groupby("Cluster")[ITEMS].mean().round(2)
 profile["n"] = data.groupby("Cluster").size()
 print("\nCluster profiles (mean by item):")
@@ -402,7 +398,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "cluster_profiles_shape.png", dpi=120)
 plt.close(fig)
 
-# %% K-medoids sensitivity check
+# K-medoids sensitivity check
 print("\nK-medoids sensitivity check")
 from scipy.spatial.distance import pdist, squareform
 dist = squareform(pdist(X_std, metric="euclidean"))
@@ -412,10 +408,9 @@ ari = adjusted_rand_score(data["Cluster"], kmd_labels)
 print(f"Adjusted Rand Index (k-means vs k-medoids): {ari:.3f}")
 RESULTS["kmeans_kmedoids_ari"] = float(ari)
 
-# %% [markdown]
 # Section 11 — CART decision tree mapping segments to clusters
 
-# %% CART decision tree
+# CART decision tree
 print("\n" + "=" * 60)
 print("CART decision tree: Usage + VRC+ -> Cluster")
 print("=" * 60)
@@ -439,10 +434,9 @@ fig.tight_layout()
 fig.savefig(CHARTS / "cart_decision_tree.png", dpi=120)
 plt.close(fig)
 
-# %% [markdown]
 # Section 12 — Selection-bias diagnostics (cluster × segment composition)
 
-# %% Cluster composition by segment
+# Cluster composition by segment
 usage_by_cluster = pd.crosstab(data["Cluster"], data["Usage Bin"], normalize="index").round(3) * 100
 vrcplus_by_cluster = pd.crosstab(data["Cluster"], data["VRC+"], normalize="index").round(3) * 100
 print("\n% Usage Bin by Cluster:")
@@ -467,10 +461,9 @@ fig.tight_layout()
 fig.savefig(CHARTS / "cluster_by_usage.png", dpi=120)
 plt.close(fig)
 
-# %% [markdown]
 # Section 13 — Enforcement Balance directional deep-dive
 
-# %% Enforcement Direction by segment
+# Enforcement Direction by segment
 ed_label = data["Enforcement Direction"].map({
     -2: "Far too little", -1: "Slightly too little", 0: "About right",
     1: "Slightly too much", 2: "Far too much",
@@ -505,7 +498,7 @@ fig.tight_layout()
 fig.savefig(CHARTS / "enforcement_by_usage.png", dpi=120)
 plt.close(fig)
 
-# %% Cronbach's alpha — Experience block sanity check
+# Cronbach's alpha — Experience block sanity check
 import pingouin as pg
 exp_items = [ITEM_LABELS[i] for i in EXPERIENCE_IDX]
 alpha = pg.cronbach_alpha(data[exp_items])
@@ -514,7 +507,7 @@ print(f"\nExperience block Cronbach's alpha: {alpha[0]:.3f} "
 RESULTS["experience_cronbach_alpha"] = float(alpha[0])
 RESULTS["experience_cronbach_ci"] = [float(alpha[1][0]), float(alpha[1][1])]
 
-# %% Dump RESULTS for the report writers
+# Dump RESULTS for the report writers
 with open(OUT / "results.json", "w") as f:
     json.dump(RESULTS, f, indent=2, default=str)
 print(f"\nWrote {OUT / 'results.json'}")
