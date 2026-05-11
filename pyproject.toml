@@ -1,0 +1,29 @@
+[project]
+name = "monthly-metrics-survey"
+version = "0.1.0"
+description = "VRChat Monthly Metrics Survey — pilot Likert analysis (EFA/CFA, k-means, CART)."
+authors = [{ name = "Liz", email = "liz@vrchat.com" }]
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+dynamic = ["dependencies"]
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.15"
+pandas = "^2.2"
+numpy = "^2.0"
+matplotlib = "^3.9"
+seaborn = "^0.13"
+scipy = "^1.13"
+openpyxl = "^3.1"
+scikit-learn = "^1.5"
+factor-analyzer = "^0.5.1"
+semopy = "^2.3"
+kmedoids = "^0.5"
+pingouin = ">=0.5.5,<0.7"
+
+[build-system]
+requires = ["poetry-core>=2.0,<3.0"]
+build-backend = "poetry.core.masonry.api"
