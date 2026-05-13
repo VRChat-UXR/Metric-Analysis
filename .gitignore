@@ -1,7 +1,8 @@
 # =====================================================================
-# Survey data — never commit raw responses (PII).
+# Survey data — never commit raw responses or invitee lists (PII).
 # =====================================================================
 UXR_Survey_Results_*.xlsx
+uxr_monthly_survey_*.csv
 *.xlsx
 
 # =====================================================================
