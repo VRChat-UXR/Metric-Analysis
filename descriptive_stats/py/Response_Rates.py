@@ -226,9 +226,82 @@ plt.tight_layout()
 plt.savefig(CHARTS / "usable_responses_tenure_distribution.png", dpi=150)
 plt.close()
 
+# Matrix: usable response rate by tenure × platform
+# Uses the send list as the canonical source for both tenure and platform
+# (the send list is the denominator universe; col 11 of the response file
+# only sees the numerator and would bias the platform mix).
+PLATFORMS = ["Standalone VR", "PCVR", "Desktop", "Mobile"]
+
+sent["usable"] = sent["user_id"].isin(ids_usable)
+# unstack can leave NaN where a (bucket, platform) combo has no rows, and
+# reindex's fill_value only fills *new* index/column entries — so .fillna(0)
+# is the actual zero-fill we want before casting to int.
+sent_cell = (sent.groupby(["bucket", "platform"]).size()
+                 .unstack("platform")
+                 .reindex(index=TENURE_BUCKETS, columns=PLATFORMS)
+                 .fillna(0).astype(int))
+usable_cell = (sent.groupby(["bucket", "platform"])["usable"].sum()
+                   .unstack("platform")
+                   .reindex(index=TENURE_BUCKETS, columns=PLATFORMS)
+                   .fillna(0).astype(int))
+rate_cell = (usable_cell / sent_cell.replace(0, np.nan) * 100).round(2)
+
+# Add column and row totals (marginal rates) for the table view.
+sent_cell["TOTAL"] = sent_cell.sum(axis=1)
+usable_cell["TOTAL"] = usable_cell.sum(axis=1)
+sent_cell.loc["TOTAL"] = sent_cell.sum(axis=0)
+usable_cell.loc["TOTAL"] = usable_cell.sum(axis=0)
+rate_full = (usable_cell / sent_cell.replace(0, np.nan) * 100).round(2)
+
+rate_full.to_csv(OUT / "response_rates_by_tenure_platform.csv")
+sent_cell.to_csv(OUT / "response_rates_by_tenure_platform_sent.csv")
+usable_cell.to_csv(OUT / "response_rates_by_tenure_platform_usable.csv")
+
+print("\n=== Usable response rate (%) by tenure × platform ===")
+print(rate_full.to_string())
+
+# Chart 4: heatmap of response rate, tenure × platform
+fig, ax = plt.subplots(figsize=(9.5, 5.5))
+data = rate_cell.values.astype(float)
+im = ax.imshow(data, aspect="auto", cmap="Blues",
+               vmin=np.nanmin(data), vmax=np.nanmax(data))
+
+ax.set_xticks(np.arange(len(PLATFORMS)))
+ax.set_xticklabels(PLATFORMS)
+ax.set_yticks(np.arange(len(TENURE_BUCKETS)))
+ax.set_yticklabels(TENURE_BUCKETS)
+ax.set_xlabel("Platform")
+ax.set_ylabel("Tenure (months since activation)")
+ax.set_title(f"Wave {WAVE} — Usable response rate by tenure × platform")
+
+# Cell annotations: rate%, with usable/sent counts beneath.
+threshold = np.nanmin(data) + (np.nanmax(data) - np.nanmin(data)) * 0.55
+for i, bucket in enumerate(TENURE_BUCKETS):
+    for j, plat in enumerate(PLATFORMS):
+        rate = rate_cell.loc[bucket, plat]
+        n_sent = int(sent_cell.loc[bucket, plat])
+        n_usable = int(usable_cell.loc[bucket, plat])
+        if n_sent == 0 or np.isnan(rate):
+            label = "—"
+            color = "#666666"
+        else:
+            label = f"{rate:.1f}%\n({n_usable}/{n_sent})"
+            color = "white" if rate >= threshold else "#1a1a1a"
+        ax.text(j, i, label, ha="center", va="center", fontsize=9, color=color)
+
+cbar = fig.colorbar(im, ax=ax, fraction=0.04, pad=0.03)
+cbar.set_label("Response rate (%)")
+plt.tight_layout()
+plt.savefig(CHARTS / "response_rates_by_tenure_platform.png", dpi=150)
+plt.close()
+
 print(f"\nWrote:")
 print(f"  {OUT / 'response_rates_by_tenure.csv'}")
 print(f"  {OUT / 'response_rate_funnel_by_tenure.csv'}")
+print(f"  {OUT / 'response_rates_by_tenure_platform.csv'}")
+print(f"  {OUT / 'response_rates_by_tenure_platform_sent.csv'}")
+print(f"  {OUT / 'response_rates_by_tenure_platform_usable.csv'}")
 print(f"  {CHARTS / 'response_rates_by_tenure.png'}")
 print(f"  {CHARTS / 'response_rate_funnel_by_tenure.png'}")
 print(f"  {CHARTS / 'usable_responses_tenure_distribution.png'}")
+print(f"  {CHARTS / 'response_rates_by_tenure_platform.png'}")
